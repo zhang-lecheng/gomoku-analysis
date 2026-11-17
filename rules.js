@@ -43,6 +43,21 @@
     return b;
   }
 
+  // Rapfi prints its YXNBEST blocks in search order, not in rank order, so rows[0] is not
+  // necessarily the best move. Rank them by score before anything reads the first row.
+  function scoreValue(row) {
+    const score = Number(row && row.score) || 0;
+    if (row && row.scoreType === 'mate') return score > 0 ? 100000 - score : -100000 - score;
+    return score;
+  }
+  function orderCandidates(rows) {
+    return (rows || []).slice().sort((a, b) => {
+      const diff = scoreValue(b) - scoreValue(a);
+      if (diff) return diff;
+      return (Number(a.index) || 0) - (Number(b.index) || 0);
+    });
+  }
+
   // Difficulty ladder. Depth is the engine's stop condition, so a level plays the
   // same strength on any machine; `slip` is the chance of taking the 2nd/3rd best
   // root move instead of the best one, which keeps the low levels beatable.
@@ -144,7 +159,7 @@
 
   return {
     SIZE, BLACK, WHITE, EMPTY, DIRS, idx, inside, name, pos, newBoard, apply,
-    winLine, isFull, LEVELS, levelInfo, chooseMove, opponent, resultForWin,
+    winLine, isFull, LEVELS, levelInfo, chooseMove, opponent, resultForWin, scoreValue, orderCandidates,
     START_RATING, ratingDelta, applyRating, rankLabel, RANKS, nextLevel,
     BLUNDER, MISTAKE, gradeMove,
   };

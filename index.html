@@ -35,5 +35,6 @@
 <footer><span>LOCAL ANALYSIS · 本地运行，棋局不会上传</span><div><button id="copy">复制分享链接</button><button id="export">导出 JSON</button><button id="import">导入 JSON</button><button id="logs">下载日志</button><input id="file" type="file" accept="application/json,.json" hidden></div></footer>
 <dialog id="help"><div class="dialog-head"><div><div class="eyebrow">HOW TO USE</div><h2>使用说明</h2></div><button id="help-close" class="icon-btn">×</button></div><p>在棋盘上点击交叉点摆子。选择黑棋、白棋、交替或擦除模式，并明确设置下一手的颜色。</p><p>点击「开始分析」后，引擎在浏览器中计算。多候选会分摊搜索预算，战术题可优先选择一个候选并给予较长时间。点击候选行可在棋盘上逐步预览变化；修改棋局会清除旧结果。</p><p>坐标以左下角为 A1。分享链接包含棋子与行棋方；JSON 可用于保存或恢复局面。浏览器关闭后正在运行的分析将停止。手动编辑局面没有完整棋谱；为设置行棋方，引擎可能插入跳步，这会影响依赖历史的判断。</p><p>「目标深度」是主要停止条件：到达即停，时间只作上限。达到目标深度时结果与设备速度无关；显示「被时间截断」时，结果会随机器快慢变化。多线程的搜索结果不保证可复现，可能与单线程不同。</p><p>M 值以半手（ply）为单位：M+35 是 35 个半手，约 18 个己方着手。它来自搜索树内的判断，不是穷举证明。</p><p>多线程需要浏览器支持跨源隔离与 SharedArrayBuffer。页面会尝试通过 Service Worker 启用隔离；若不可用，则使用单线程。</p></dialog>
 <div class="toast" id="toast" role="status"></div>
+<script src="rules.js"></script>
 <script src="app.js"></script>
 </body></html>

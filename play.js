@@ -300,8 +300,8 @@
     if (data.type === 'done') {
       ENGINE.jobs.delete(data.id);
       if (job.timer) clearTimeout(job.timer);
-      const rows = Array.from(job.rows.values())
-        .sort((a, b) => (Number(a.index) || 1) - (Number(b.index) || 1));
+      // The engine prints PV blocks in search order; rank them by score.
+      const rows = R.orderCandidates(Array.from(job.rows.values()));
       job.resolve({ rows, reason: data.reason, depth: data.depth, move: data.move });
     }
   }

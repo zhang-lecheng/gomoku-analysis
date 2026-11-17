@@ -96,4 +96,27 @@ assert.equal(R.gradeMove(600, 30000 - 35, false, true), 'blunder', 'walking into
 assert.equal(R.gradeMove(-(30000 - 4), -(30000 - 4), true, true), 'lost', 'already mated either way');
 assert.equal(R.gradeMove(30000 - 35, 30000 - 40, true, true), 'won', 'winning either way');
 
+
+// --- PV blocks arrive in search order, not rank order ---------------------
+{
+  const rows = [
+    { index: 1, score: -463, scoreType: 'eval' },
+    { index: 2, score: -486, scoreType: 'eval' },
+    { index: 3, score: -452, scoreType: 'eval' },
+    { index: 4, score: -529, scoreType: 'eval' },
+    { index: 5, score: -566, scoreType: 'eval' },
+  ];
+  const sorted = R.orderCandidates(rows);
+  assert.equal(sorted[0].index, 3, 'the highest score leads, not the first printed block');
+  assert.deepEqual(sorted.map(r => r.index), [3, 1, 2, 4, 5]);
+}
+{
+  const mate = (i, score) => ({ index: i, score, scoreType: 'mate' });
+  const rows = [mate(1, 9), mate(2, 5), mate(3, 35)];
+  assert.equal(R.orderCandidates(rows)[0].index, 2, 'shorter mate wins');
+  const losing = [mate(1, -5), mate(2, -9), mate(3, -35)];
+  assert.equal(R.orderCandidates(losing)[0].index, 3, 'when losing, the longest resistance wins');
+  assert.ok(R.scoreValue(mate(1, 5)) > R.scoreValue({ score: 900, scoreType: 'eval' }), 'a mate beats any eval');
+}
+
 console.log('Rules: wins in four directions, ladder, slip, rating and review grading passed.');
