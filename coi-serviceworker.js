@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Cross-origin isolation for local static assets on hosts without COOP/COEP headers. */
 if (typeof window === 'undefined') {
   self.addEventListener('install', () => self.skipWaiting());

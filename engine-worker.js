@@ -1,4 +1,5 @@
-/* Rapfi GPL-3.0-or-later worker adapter; see engine/COPYING.txt. */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Rapfi worker adapter; see LICENSE and engine/COPYING.txt. */
 'use strict';
 let engine = null, activeId, currentPV = null, bestMove = null, mode = 'single', threads = 1;
 // Per-analysis bookkeeping for the `reason` field on `done`.
