@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* play.css — 练棋页增量样式。只补充 style.css 未覆盖的结构，
+   配色沿用：底 #f3f2eb / 深绿 #3c5a46 / 米色棋盘 #dfc49a / 次要文字 #8a968b */
+
+/* ---------- 顶栏跳转链接 ----------
+   基础色与 hover 见 style.css 的 .nav-link，这里只补键盘焦点态 */
+.nav-link:focus-visible{outline:2px solid #a8c697;outline-offset:3px;border-radius:2px}
+
+/* ---------- 页签 ---------- */
+.tabbar{display:flex;gap:28px;padding:0 max(4vw,28px);background:#f3f2eb;border-bottom:1px solid #dde3da;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tabbar button{flex:none;border:0;background:none;padding:17px 1px 14px;font-size:13px;font-weight:500;letter-spacing:.05em;color:#8a968b;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.tabbar button:hover{color:#3c5a46}
+.tabbar button.active{color:#2f4a3a;font-weight:600;border-bottom-color:#3c5a46}
+.tabbar button:focus-visible{outline:2px solid #9fb79b;outline-offset:-2px;border-radius:2px}
+
+/* ---------- 对局设置 ---------- */
+.board-panel{min-width:0}
+.settings.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings.two>.field{min-width:0}
+
+.check{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:11.5px;line-height:1.5;color:#6a7a6e;cursor:pointer;user-select:none}
+.check input{flex:none;width:14px;height:14px;margin:0;accent-color:#3c5a46;cursor:pointer}
+
+/* ---------- 小指标 ---------- */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px;padding-top:15px;border-top:1px solid #e3e8df}
+.kpis>div{min-width:0;display:flex;flex-direction:column;gap:5px}
+.kpis span{font-size:10px;letter-spacing:.05em;color:#9aa79b}
+.kpis b{font-size:14px;font-weight:600;line-height:1.3;color:#43564a;font-variant-numeric:tabular-nums}
+
+.kpis.big{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:0;padding-top:0;border-top:0}
+.kpis.big>div{gap:4px;padding:12px 14px;background:#eef1e9;border:1px solid #e2e8dc;border-radius:4px}
+.kpis.big b{font-size:22px;letter-spacing:.01em}
+.kpis.big small{font-size:10.5px;line-height:1.4;color:#8a968b}
+
+/* ---------- 着手列表 ---------- */
+.mv-scroll{max-height:240px;overflow-y:auto;overscroll-behavior:contain;margin-top:8px;scrollbar-width:thin;scrollbar-color:#c3d1bd transparent}
+.mv-scroll::-webkit-scrollbar{width:6px}
+.mv-scroll::-webkit-scrollbar-thumb{background:#c3d1bd;border-radius:99px}
+.mv-row{display:flex;align-items:center;gap:8px;width:100%;padding:6px 7px;border:0;border-radius:3px;background:none;font:inherit;font-size:11px;line-height:1.4;color:#506857;text-align:left;cursor:pointer}
+.mv-row:hover{background:#dde7d7}
+.mv-row.selected{background:#cfdcc7;color:#2f4a3a}
+.mv-row>span:first-child{flex:none;width:20px;color:#93a292;font-variant-numeric:tabular-nums}
+.mv-row b{font-weight:600;color:#3c5a46}
+.mv-row .stone{flex:none;width:10px;height:10px}
+
+/* ---------- 战术小测 ---------- */
+.puzzle-head{display:flex;align-items:flex-start;gap:9px}
+.puzzle-head b{min-width:0;font-size:14px;font-weight:600;line-height:1.5;color:#31453a;word-break:break-word}
+.badge{flex:none;display:inline-block;margin-top:2px;padding:3px 8px;border-radius:3px;background:#e3ecdf;color:#3c5a46;font-size:10px;font-weight:700;letter-spacing:.08em}
+
+.puzzle-result{margin-top:14px;padding:11px 13px;border-radius:4px;border-left:3px solid #cfd9cb;background:#eef1e9;color:#4c6252;font-size:12px;line-height:1.6}
+.puzzle-result[hidden]{display:none}
+.puzzle-result.ok{border-left-color:#5b8464;background:#e6efe2;color:#3c5a46}
+.puzzle-result.bad{border-left-color:#c0705e;background:#f7e8e2;color:#8d4a3a}
+
+.puzzle-explain{margin-top:10px;padding:12px 13px;border:1px solid #e4dcc6;border-radius:4px;background:#efeade;color:#6f7a66;font-size:11.5px;line-height:1.75}
+.puzzle-explain[hidden]{display:none}
+
+/* ---------- 个人记录 ---------- */
+h3.sub{margin:24px 0 11px;font-size:13px;font-weight:600;letter-spacing:.05em;color:#3c5a46}
+h3.sub:first-child{margin-top:0}
+
+.bars{display:grid;gap:9px}
+.bars>div{display:grid;grid-template-columns:58px minmax(0,1fr) 46px;align-items:center;gap:10px;font-size:11px;color:#7d8981}
+.bars>div>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars>div>b{font-weight:600;text-align:right;color:#506857;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:99px;background:#e3e8dc;overflow:hidden}
+.bar>i{display:block;width:0;height:100%;border-radius:99px;background:#3c5a46;transition:width .45s ease}
+
+.skills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.skill{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:9px 11px;border:1px solid #e2e8dc;border-radius:4px;background:#eef1e9;font-size:11px;line-height:1.4;color:#6a7a6e}
+.skill>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill b,.skill strong{flex:none;font-size:12px;font-weight:600;color:#3c5a46}
+.skill small{flex:none;font-size:10.5px;color:#8a968b}
+
+.table-wrap{margin-top:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid #e1e6de}
+table.records{width:100%;min-width:330px;border-collapse:collapse;font-size:11px;color:#5c6d62}
+table.records th{padding:7px 8px;font-size:10px;font-weight:600;letter-spacing:.06em;text-align:left;white-space:nowrap;color:#9aa79b;border-bottom:1px solid #d9e0d7}
+table.records td{padding:9px 8px;white-space:nowrap;border-bottom:1px solid #e7ebe2;font-variant-numeric:tabular-nums}
+table.records tbody tr:last-child td{border-bottom:0}
+table.records tbody tr:hover{background:#eef1e9}
+
+/* ---------- 复盘列表 ---------- */
+.review-row{display:flex;align-items:center;gap:8px;width:100%;padding:6px 7px;border:0;border-radius:3px;background:none;font:inherit;font-size:11px;line-height:1.4;color:#506857;text-align:left;cursor:pointer}
+.review-row:hover{background:#dde7d7}
+.review-row.selected{background:#cfdcc7;color:#2f4a3a}
+.review-row>:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.review-row b{flex:none;font-weight:600;color:#3c5a46}
+.review-row small{flex:none;color:#8d9a8f;font-variant-numeric:tabular-nums}
+
+.grade{flex:none;display:inline-flex;align-items:center;justify-content:center;width:9px;height:9px;border-radius:99px;background:#cfd9cb;color:#4c6252;font-size:10px;font-weight:600;line-height:1;letter-spacing:.03em}
+.grade:not(:empty){width:auto;height:auto;min-width:34px;padding:3px 7px;border-radius:99px}
+.grade.ok{background:#cfd9cb;color:#4c6252}
+.grade.mistake{background:#eadfc0;color:#8a6a24}
+.grade.blunder{background:#efd6cd;color:#8e4a3a}
+
+/* ---------- 棋盘标记 ---------- */
+/* 最近一手：细描边，黑子白边、白子深边 */
+.piece.mark-last{outline:1.5px solid #f4f5ee;outline-offset:-3px}
+.piece.white.mark-last{outline-color:#33513f}
+
+/* 胜利五连：外圈发光 */
+.piece.mark-win{box-shadow:0 0 0 2px #caa96b,0 0 9px 2px #caa96b80}
+
+/* 最佳点提示：虚线圆环，不填色、不吃事件 */
+.mark-best{position:absolute;box-sizing:border-box;border:1.5px dashed #3c5a46;border-radius:50%;background:#3c5a4614;pointer-events:none;z-index:3}
+.intersection>.mark-best{inset:-2%}
+.board>.mark-best{width:7.5%;height:7.5%;transform:translate(-50%,-50%)}
+
+/* 落子对错：短促标记 */
+.puzzle-ok,.puzzle-bad{position:absolute;box-sizing:border-box;border:2px solid;border-radius:50%;pointer-events:none;z-index:4;animation:mark-fade .45s ease-out}
+.puzzle-ok{border-color:#4f8355;box-shadow:0 0 0 3px #4f835533}
+.puzzle-bad{border-color:#b85a48;box-shadow:0 0 0 3px #b85a4833}
+.intersection>.puzzle-ok:not(.piece),.intersection>.puzzle-bad:not(.piece){inset:-6%}
+.board>.puzzle-ok,.board>.puzzle-bad{width:8%;height:8%;transform:translate(-50%,-50%)}
+.intersection.puzzle-ok::after,.intersection.puzzle-bad::after{content:'';position:absolute;inset:-6%;border:2px solid;border-radius:50%;pointer-events:none}
+.intersection.puzzle-ok::after{border-color:#4f8355}
+.intersection.puzzle-bad::after{border-color:#b85a48}
+@keyframes mark-fade{from{opacity:0}to{opacity:1}}
+
+/* ---------- 窄屏 ---------- */
+@media(max-width:900px){
+  .tabbar{gap:22px}
+  .mv-scroll{max-height:220px}
+  .puzzle-head b{font-size:13.5px}
+}
+
+@media(max-width:520px){
+  .tabbar{gap:15px;padding:0 16px}
+  .tabbar button{padding:13px 1px 11px;font-size:12px}
+
+  .check{align-items:flex-start;font-size:11px;line-height:1.5}
+  .check input{margin-top:1px}
+
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}
+  .kpis b{font-size:13px}
+  .kpis.big>div{padding:10px 11px}
+  .kpis.big b{font-size:19px}
+
+  .mv-scroll{max-height:200px}
+
+  .puzzle-head{gap:7px}
+  .puzzle-head b{font-size:13px}
+  .puzzle-result,.puzzle-explain{padding:10px 11px;font-size:11.5px}
+
+  .bars>div{grid-template-columns:46px minmax(0,1fr) 40px;gap:8px}
+  .skills{grid-template-columns:minmax(0,1fr)}
+  table.records{min-width:300px}
+  table.records th,table.records td{padding:7px 6px}
+}

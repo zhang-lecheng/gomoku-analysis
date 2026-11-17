@@ -1,0 +1,75 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1e292b"><title>练棋 · 人机对弈</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="play.css">
+<script src="./coi-serviceworker.js"></script>
+</head>
+<body>
+<header class="topbar"><div class="brand"><span class="brand-mark">✳</span><div><b>练棋</b><span>PLAY &amp; TRAIN</span></div></div><div class="top-right"><a class="nav-link" href="./index.html">局面分析 →</a><span class="status-dot" id="engine-dot"></span><span id="engine-status">正在准备引擎</span><button class="icon-btn" id="help-btn" title="使用说明" aria-label="使用说明">?</button></div></header>
+
+<nav class="tabbar" id="tabbar">
+  <button data-tab="play" class="active">人机对弈</button>
+  <button data-tab="puzzles">战术小测</button>
+  <button data-tab="records">个人记录</button>
+</nav>
+
+<main class="layout">
+  <section class="board-panel">
+    <div class="section-heading"><div><div class="eyebrow" id="board-eyebrow">PLAY ／ 01</div><h1 id="board-title">和引擎下一局</h1><p id="board-sub">你执黑先行，点交叉点落子。</p></div><div class="move-indicator"><span>当前</span><strong id="board-status">等待开始</strong></div></div>
+    <div class="board-wrap"><div class="board" id="board" role="grid" aria-label="十五路五子棋棋盘"></div></div>
+    <div class="board-footer"><div class="legend"><span><i class="stone black"></i>黑 <b id="black-count">0</b></span><span><i class="stone white"></i>白 <b id="white-count">0</b></span></div><div class="board-actions"><button class="text-btn" id="undo">↶ 悔棋</button><button class="text-btn" id="pass" title="让引擎替你下这一手，然后它作为对手再应一手">引擎代走</button><button class="text-btn" id="resign">认输</button><button class="text-btn" id="reset">重开</button></div></div>
+  </section>
+
+  <aside class="analysis-panel">
+    <div class="panel-title"><div><div class="eyebrow" id="panel-eyebrow">OPPONENT ／ 02</div><h2 id="panel-title">对局设置</h2></div><span class="engine-tag" id="rating-tag">RAPFI <span>WASM</span></span></div>
+
+    <div id="panel-play">
+      <div class="settings two"><div class="field"><label for="side">你执</label><select id="side"><option value="black">黑棋（先行）</option><option value="white">白棋（后行）</option></select></div><div class="field"><label for="level">难度</label><select id="level"></select></div></div>
+      <label class="check"><input type="checkbox" id="adaptive" checked> 自适应：连胜两局升一档，连败两局降一档</label>
+      <p class="hint" id="play-hint"></p>
+      <div class="run-row"><button class="primary" id="new-game">开始新局</button><button class="stop" id="review-btn" disabled>复盘</button></div>
+      <div class="engine-note" id="engine-detail">正在加载本地引擎与网络权重…</div>
+      <div class="kpis"><div><span>本局</span><b id="kpi-moves">0</b></div><div><span>难度</span><b id="kpi-level">—</b></div><div><span>战绩</span><b id="kpi-record">0 胜 0 负</b></div></div>
+      <div class="variation" id="mv-list" hidden><div><b>着手</b><span id="mv-count"></span></div><div class="mv-scroll" id="mv-rows"></div></div>
+    </div>
+
+    <div id="panel-puzzles" hidden>
+      <div class="puzzle-head"><span class="badge" id="puzzle-cat">防守</span><b id="puzzle-title">—</b></div>
+      <p class="hint" id="puzzle-hint"></p>
+      <div class="run-row"><button class="primary" id="puzzle-next">下一题</button><button class="stop" id="puzzle-show">看答案</button></div>
+      <div class="puzzle-result" id="puzzle-result" hidden></div>
+      <div class="puzzle-explain" id="puzzle-explain" hidden></div>
+      <p class="score-note">判题方式：你落子后，引擎在 18 层评估对手局面——对手被将死算对（进攻题），对手拿不到必胜算对（防守题）。所以同题可以有多个正确答案。</p>
+    </div>
+
+    <div id="panel-records" hidden>
+      <div class="kpis big"><div><span>暂定等级</span><b id="rec-rating">1000</b><small id="rec-rank">初级</small></div><div><span>总战绩</span><b id="rec-record">0 / 0</b><small id="rec-rate">—</small></div></div>
+      <h3 class="sub">各难度胜率</h3>
+      <div id="rec-levels" class="bars"></div>
+      <h3 class="sub">能力项</h3>
+      <div id="rec-skills" class="skills"></div>
+      <h3 class="sub">最近对局</h3>
+      <div class="table-wrap"><table class="records" id="rec-games"><thead><tr><th>时间</th><th>难度</th><th>执</th><th>结果</th><th>手数</th></tr></thead><tbody></tbody></table></div>
+      <div class="run-row"><button class="stop" id="rec-reset">清空记录</button></div>
+    </div>
+  </aside>
+</main>
+
+<dialog id="help"><div class="dialog-head"><div><div class="eyebrow">HOW TO USE</div><h2>使用说明</h2></div><button id="help-close" class="icon-btn">×</button></div>
+<p>三个页签：人机对弈、战术小测、个人记录。对弈时点交叉点落子，引擎会自动应手；一局结束后可以点「复盘」，引擎会逐手检查你的着法并标出失误。</p>
+<p>难度按搜索深度分档（6 / 10 / 14 / 20 / 26 层），不是按时间，所以在快慢不同的机器上强弱一致。低难度会让你看到「次优着」，不是永远下最强手。</p>
+<p>自适应开关打开时，连胜两局升一档、连败两局降一档；关掉就固定在你选的难度。</p>
+<p>复盘只检查你下的棋：每一手都在同一深度重新算一遍，给出引擎认为更好的点与后续变化。评分差 300 以上记为失误，错失必胜或走成被将死直接记为失误。</p>
+<p>战术小测的题目都经过引擎验证，答案不唯一——判定看落子后的局面，而不是比对固定坐标。记录只存在这台浏览器里，不会上传。</p>
+<p>M 值以半手（ply）为单位：M+35 是 35 个半手，约 18 个己方着手，是引擎在搜索树里的判断，不是穷举证明。</p>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="rules.js"></script>
+<script src="puzzles.js"></script>
+<script src="play.js"></script>
+</body></html>
