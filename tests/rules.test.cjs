@@ -41,11 +41,18 @@ assert.ok(R.LEVELS.every((l, i, a) => i === 0 || l.moveMs > a[i - 1].moveMs), 'p
 assert.equal(R.levelInfo(0).level, 1, 'clamps low');
 assert.equal(R.levelInfo(99).level, 5, 'clamps high');
 {
-  const rows = [{ index: 1, pv: [{ x: 1, y: 1 }] }, { index: 2, pv: [{ x: 2, y: 2 }] }, { index: 3, pv: [{ x: 3, y: 3 }] }];
-  assert.equal(R.chooseMove(rows, 5, () => 0).index, 1, 'strongest level always plays the top move');
+  const mk = (i, score) => ({ index: i, score, scoreType: 'eval', pv: [{ x: i, y: i }] });
+  const near = [mk(1, 300), mk(2, 280), mk(3, 260)];   // all within the margin
+  const far = [mk(1, 300), mk(2, 40), mk(3, -100)];    // rank 2 already loses 260
+  assert.equal(R.chooseMove(near, 5, () => 0).index, 1, 'strongest level always plays the top move');
   let calls = 0;
-  const rng = () => (calls++ === 0 ? 0.1 : 0.9); // first call slips, second keeps the runner-up
-  assert.equal(R.chooseMove(rows, 1, rng).index, 2, 'level 1 slips to the runner-up');
+  const rng = () => (calls++ === 0 ? 0.1 : 0.0);
+  assert.equal(R.chooseMove(near, 1, rng).index, 2, 'a slip inside the margin takes the runner-up');
+  assert.ok([2, 3].includes(R.chooseMove(near, 1, () => 0.2).index), 'the third move is reachable inside the margin');
+  assert.equal(R.chooseMove(far, 1, () => 0.1).index, 1, 'never slips to a move outside the margin');
+  // mate rows only compete with mate rows
+  const mixed = [{ index: 1, score: 30000 - 35, scoreType: 'mate', pv: [{}] }, { index: 2, score: 500, scoreType: 'eval', pv: [{}] }];
+  assert.equal(R.chooseMove(mixed, 1, () => 0.1).index, 1, 'a forced mate is never traded for an eval move');
   assert.equal(R.chooseMove([], 3), null, 'no rows, no move');
 }
 

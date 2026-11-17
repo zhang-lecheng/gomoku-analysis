@@ -49,23 +49,35 @@
   // `moveMs` caps a single move so the opening cannot turn into a multi-minute wait
   // on a wide board; when it binds, the move is slightly weaker than the level claims.
   const LEVELS = [
-    { level: 1, label: '入门', depth: 6, slip: 0.55, moveMs: 3000, blurb: '只看眼前一两步，经常漏防' },
-    { level: 2, label: '初级', depth: 10, slip: 0.4, moveMs: 5000, blurb: '会挡活三，算不到连续进攻' },
-    { level: 3, label: '中级', depth: 14, slip: 0.22, moveMs: 8000, blurb: '能看四五步，偶尔漏掉双威胁' },
-    { level: 4, label: '高级', depth: 20, slip: 0.08, moveMs: 12000, blurb: '会算连续冲四，收官很稳' },
+    { level: 1, label: '入门', depth: 6, slip: 0.4, moveMs: 3000, blurb: '只看眼前一两步，经常漏防' },
+    { level: 2, label: '初级', depth: 10, slip: 0.25, moveMs: 5000, blurb: '会挡活三，算不到连续进攻' },
+    { level: 3, label: '中级', depth: 14, slip: 0.12, moveMs: 8000, blurb: '能看四五步，偶尔漏掉双威胁' },
+    { level: 4, label: '高级', depth: 20, slip: 0.05, moveMs: 12000, blurb: '会算连续冲四，收官很稳' },
     { level: 5, label: '最强', depth: 26, slip: 0, moveMs: 18000, blurb: '不犯错，单机浏览器里已够用' },
   ];
   const levelInfo = level => LEVELS[Math.max(0, Math.min(LEVELS.length - 1, level - 1))];
 
   // With multiPV rows in score order, pick the root move to actually play.
-  function chooseMove(rows, level, rng) {
+  // A slip is only allowed inside `margin` score points of the best move: two moves can
+  // be a few points apart and still differ on whether they block a three, and a level
+  // that "forgets" to block a live three is not a weaker opponent, it is a broken one.
+  function chooseMove(rows, level, rng, margin) {
     if (!rows || !rows.length) return null;
     const info = levelInfo(level);
     const rand = rng || Math.random;
     if (info.slip <= 0 || rows.length === 1 || rand() >= info.slip) return rows[0];
-    // Slip: prefer the runner-up, occasionally the third move.
-    const idxPick = rows.length > 2 && rand() < 0.35 ? 2 : 1;
-    return rows[Math.min(idxPick, rows.length - 1)];
+    const best = rows[0];
+    const limit = margin == null ? 60 : margin;
+    const bestScore = Number(best.score);
+    const pool = rows.filter((row, i) => {
+      if (i === 0) return true;
+      if ((row.scoreType === 'mate') !== (best.scoreType === 'mate')) return false;
+      const score = Number(row.score);
+      if (!Number.isFinite(score) || !Number.isFinite(bestScore)) return false;
+      return Math.abs(score - bestScore) <= limit;
+    });
+    if (pool.length <= 1) return best;
+    return pool[1 + Math.floor(rand() * (pool.length - 1))];
   }
 
   // Result from the player's point of view: 'win' | 'loss' | 'draw'.
