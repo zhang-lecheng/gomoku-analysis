@@ -19,6 +19,21 @@ vm.createContext(context); vm.runInContext(source,context);
  await context.self.onmessage({data:{type:'analyze',id:7,side:2,timeMs:1000,multiPV:2,moves:[{x:5,y:4,color:1},{x:6,y:4,color:2}]}});
  const board=commands.find(c=>c.startsWith('YXBOARD'));
  assert.equal(board,'YXBOARD\n5,4,2\n6,4,1\n-1,-1,2\nDONE');
+ // The hash must be cleared for every analysis, before the board is rebuilt:
+ // Rapfi keeps the transposition table across YXBOARD, so a warm hash would make a
+ // repeated analysis of the same settings report a different score.
+ {
+  const firstClear=commands.indexOf('YXHASHCLEAR');
+  const firstBoard=commands.findIndex(c=>c.startsWith('YXBOARD'));
+  assert.ok(firstClear>=0,'analyze must send YXHASHCLEAR');
+  assert.ok(firstClear<firstBoard,'YXHASHCLEAR must precede YXBOARD');
+  await context.self.onmessage({data:{type:'analyze',id:7,side:2,timeMs:1000,multiPV:1,moves:[{x:5,y:4,color:1}]}});
+  assert.equal(commands.filter(c=>c==='YXHASHCLEAR').length,2,'one YXHASHCLEAR per analyze');
+  const lastClear=commands.lastIndexOf('YXHASHCLEAR');
+  let lastBoard=-1;
+  for(let i=commands.length-1;i>=0;i--) if(commands[i].startsWith('YXBOARD')){lastBoard=i;break;}
+  assert.ok(lastClear<lastBoard,'YXHASHCLEAR must precede YXBOARD on repeat analysis');
+ }
  for (const score of ['+M1','-M26']) {
   for (const line of ['INFO PV 0','INFO EVAL '+score,'INFO BESTLINE 4,14','INFO PV DONE']) opts.onReceiveStdout(line);
   const pv=events.filter(e=>e.type==='pv').at(-1);

@@ -84,6 +84,10 @@ function analyze(d) {
   engine.sendCommand('INFO timeout_turn '+limit);
   engine.sendCommand('INFO timeout_match 2000000000');
   engine.sendCommand('INFO max_memory '+(hash*1024*1024));
+  // YXBOARD rebuilds the position but leaves the transposition table intact, so a
+  // repeated analysis of the same position would silently start from the previous
+  // search's hash and report a different score for identical settings. Clear it.
+  engine.sendCommand('YXHASHCLEAR');
   engine.sendCommand('YXBOARD\n'+seq.map(m=>`${m.x},${m.y},${m.color===side?1:2}`).join('\n')+'\nDONE');
   engine.sendCommand('YXNBEST '+multipv);
 }
