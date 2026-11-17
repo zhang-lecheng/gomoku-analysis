@@ -833,7 +833,7 @@
 
     const line = commitMove(x, y, G.playerColor, 'player');
     if (line) {
-      finishGame('win');
+      finishGame(R.resultForWin(G.playerColor, G.playerColor));
       return;
     }
     if (R.isFull(G.board)) {
@@ -898,7 +898,7 @@
 
     const line = commitMove(point.x, point.y, asSide, asSide === G.playerColor ? 'auto' : 'engine');
     if (line) {
-      finishGame(asSide === G.playerColor ? 'loss' : 'win');
+      finishGame(R.resultForWin(asSide, G.playerColor));
       return 'over';
     }
     if (R.isFull(G.board)) {

@@ -67,6 +67,12 @@ assert.equal(R.nextLevel(5, ['win', 'win']), 5, 'ceiling');
 assert.equal(R.nextLevel(1, ['loss', 'loss']), 1, 'floor');
 assert.equal(R.nextLevel(3, ['win']), 3, 'one game is not enough');
 
+// --- who made five decides the result -------------------------------------
+assert.equal(R.resultForWin(R.WHITE, R.BLACK), 'loss', 'engine wins as white, player is black');
+assert.equal(R.resultForWin(R.BLACK, R.BLACK), 'win', 'player completes five');
+assert.equal(R.resultForWin(R.WHITE, R.WHITE), 'win', 'player is white and wins');
+assert.equal(R.resultForWin(R.BLACK, R.WHITE), 'loss', 'engine wins as black, player is white');
+
 // --- review grading -------------------------------------------------------
 assert.equal(R.gradeMove(500, 100, false, false), 'blunder');
 assert.equal(R.gradeMove(500, 300, false, false), 'mistake');

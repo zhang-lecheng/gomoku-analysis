@@ -71,6 +71,12 @@
   // Result from the player's point of view: 'win' | 'loss' | 'draw'.
   function opponent(color) { return color === BLACK ? WHITE : BLACK; }
 
+  // Who completed the five decides the result. Kept in one place because getting it
+  // backwards reports a won game as lost and vice versa.
+  function resultForWin(winner, playerColor) {
+    return winner === playerColor ? 'win' : 'loss';
+  }
+
   // Provisional rating: starts at 1000, moves by the level beaten or lost to.
   const START_RATING = 1000;
   function ratingDelta(level, result) {
@@ -116,7 +122,7 @@
 
   return {
     SIZE, BLACK, WHITE, EMPTY, DIRS, idx, inside, name, pos, newBoard, apply,
-    winLine, isFull, LEVELS, levelInfo, chooseMove, opponent,
+    winLine, isFull, LEVELS, levelInfo, chooseMove, opponent, resultForWin,
     START_RATING, ratingDelta, applyRating, rankLabel, RANKS, nextLevel,
     BLUNDER, MISTAKE, gradeMove,
   };
