@@ -53,6 +53,12 @@ assert.equal(R.levelInfo(99).level, 5, 'clamps high');
   // mate rows only compete with mate rows
   const mixed = [{ index: 1, score: 30000 - 35, scoreType: 'mate', pv: [{}] }, { index: 2, score: 500, scoreType: 'eval', pv: [{}] }];
   assert.equal(R.chooseMove(mixed, 1, () => 0.1).index, 1, 'a forced mate is never traded for an eval move');
+  // losing by force: no slipping, always the longest resistance
+  const losing = [
+    { index: 1, score: -(30000 - 4), scoreType: 'mate', pv: [{}] },
+    { index: 2, score: -(30000 - 2), scoreType: 'mate', pv: [{}] },
+  ];
+  assert.equal(R.chooseMove(losing, 1, () => 0.1).index, 1, 'when mated, play the most stubborn move');
   assert.equal(R.chooseMove([], 3), null, 'no rows, no move');
 }
 

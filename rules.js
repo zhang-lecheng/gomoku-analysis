@@ -65,8 +65,12 @@
     if (!rows || !rows.length) return null;
     const info = levelInfo(level);
     const rand = rng || Math.random;
-    if (info.slip <= 0 || rows.length === 1 || rand() >= info.slip) return rows[0];
     const best = rows[0];
+    if (info.slip <= 0 || rows.length === 1 || rand() >= info.slip) return best;
+    // Once a mate is on the board every move is a mate score, so the distance gap is a
+    // couple of points and the margin below would let a slip drop the most stubborn
+    // defence - which reads to a human as "it refused to block". Don't slip at all here.
+    if (best.scoreType === 'mate') return best;
     const limit = margin == null ? 60 : margin;
     const bestScore = Number(best.score);
     const pool = rows.filter((row, i) => {
