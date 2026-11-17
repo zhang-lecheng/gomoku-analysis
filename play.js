@@ -300,8 +300,14 @@
     if (data.type === 'done') {
       ENGINE.jobs.delete(data.id);
       if (job.timer) clearTimeout(job.timer);
-      // The engine prints PV blocks in search order; rank them by score.
+      // The engine prints PV blocks in search order; rank them by score. When a block was
+      // not refreshed at the final depth its score is stale, so the engine's own answer
+      // (done.move) wins the tie: put it first.
       const rows = R.orderCandidates(Array.from(job.rows.values()));
+      if (data.move) {
+        const at = rows.findIndex(r => r.move && r.move.x === data.move.x && r.move.y === data.move.y);
+        if (at > 0) rows.unshift(rows.splice(at, 1)[0]);
+      }
       job.resolve({ rows, reason: data.reason, depth: data.depth, move: data.move });
     }
   }
