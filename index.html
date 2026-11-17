@@ -24,6 +24,7 @@
   <div class="run-row"><button class="primary" id="analyze" disabled><span>✳</span> 开始分析</button><button class="stop" id="stop" disabled>停止</button></div>
   <div class="analysis-head"><div><span class="eyebrow">CANDIDATE MOVES</span><h3>候选落点</h3></div><span class="live-label" id="search-state">等待分析</span></div>
   <div class="metrics"><div><span>深度</span><b id="metric-depth">—</b></div><div><span>搜索节点</span><b id="metric-nodes">—</b></div><div><span>用时</span><b id="metric-time">—</b></div><div><span>节点 / 秒</span><b id="metric-speed">—</b></div></div>
+  <p class="hint" id="row-note">行内数字是该候选最后一次完整迭代；指标栏随搜索实时更新。</p>
   <div class="results" id="results"><div class="empty"><span>✳</span><b>等待第一个落点</b><p>设置局面后开始分析，候选变化将在这里显示。</p></div></div>
   <div class="variation" id="variation" hidden><div><b>变化预览</b><span id="variation-label"></span></div><div class="variation-controls"><button id="pv-prev" aria-label="上一步">←</button><span id="pv-step">0 / 0</span><button id="pv-next" aria-label="下一步">→</button><button id="pv-close">退出预览 ×</button></div></div>
   <p class="score-note">分数来自引擎评估，正值有利于当前行棋方。M+35 表示 35 个半手（ply，约 18 手）内取胜，是引擎在搜索树内的裁定，不是穷举证明；结果会随搜索深度与局面变化。</p>

@@ -62,5 +62,16 @@ vm.createContext(context); vm.runInContext(source,context);
   opts.onReceiveStdout('5,4'); reasons.push([events.at(-1).reason,events.at(-1).depth]);
   assert.deepEqual(reasons,[['depth',30],['time',12]],'done.reason distinguishes depth from time');
  }
+ // A PV block the timeout cut off before BESTLINE must not move the rows or the metrics.
+ {
+  await context.self.onmessage({data:{type:'analyze',id:10,side:1,timeMs:1000,multiPV:1,maxDepth:30,moves:[{x:5,y:4,color:1}]}});
+  const count=()=>events.filter(e=>e.type==='pv'||e.type==='stats').length;
+  const before=count();
+  for (const line of ['INFO PV 0','INFO DEPTH 31','INFO TOTALNODES 9999999','INFO EVAL 800','INFO PV DONE']) opts.onReceiveStdout(line);
+  assert.equal(count(),before,'an incomplete PV block emits no pv/stats events');
+  opts.onReceiveStdout('5,4');
+  assert.equal(events.at(-1).type,'done');
+  assert.equal(events.at(-1).reason,'time','an incomplete iteration cannot satisfy the depth target');
+ }
  console.log('Worker contract: white-to-move, passes, numeric coordinates, signed mates, hash clear, depth budget and stop reasons passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});

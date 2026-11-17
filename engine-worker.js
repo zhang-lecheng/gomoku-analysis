@@ -13,11 +13,15 @@ function output(line) {
     if (key === 'PV' && value !== 'DONE') currentPV = {index:Number(value)+1, pv:[]};
     else if (key === 'PV' && value === 'DONE' && currentPV) {
       const p = currentPV;
+      currentPV = null;
+      // A block without a best line is an iteration the timeout interrupted: it has no move
+      // to show and its depth/nodes would advance the metric strip past the last complete
+      // iteration, so rows and metrics would disagree. Drop it at the source.
+      if (!p.pv || !p.pv.length) return;
       if (p.depth != null) lastDepth = p.depth;
       if (p.scoreType === 'mate') mateSeen = true;
       emit('pv', {id:activeId, ...p, scoreType:p.scoreType || 'eval'});
       emit('stats', {id:activeId, depth:p.depth, nodes:p.nodes, timeMs:p.timeMs, nps:p.nps});
-      currentPV = null;
     } else if (currentPV) {
       const keys = {DEPTH:'depth', SELDEPTH:'selDepth', EVAL:'score', WINRATE:'winrate', TOTALNODES:'nodes', TOTALTIME:'timeMs', SPEED:'nps'};
       if (key === 'EVAL' && /^[+-]?M\d+$/.test(value)) { currentPV.scoreType='mate'; currentPV.score=Number(value.replace('M','')); }
