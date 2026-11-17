@@ -46,8 +46,14 @@ async function init(d) {
   mode = d.mode === 'multi' && self.crossOriginIsolated ? 'multi' : 'single';
   threads = mode === 'multi' ? Math.max(2,Math.min(8,Math.floor(Number(d.threads)||2))) : 1;
   if (engine) { emit('ready',{mode,threads,version:'0.44.1 (1387d113)',model:'mix9svqfreestyle_bsmix.bin.lz4',simd:true}); return; }
-  emit('status', {message:'正在加载 Rapfi 和神经网络…'});
+  // The page hands over the weight package when it already has it, so restarting a
+  // worker (stop / thread switch) does not fetch and unpack 10 MB again.
   const dataURL = new URL('./engine/rapfi-single-simd128.data', self.location.href).href;
+  if (d.data instanceof ArrayBuffer && d.data.byteLength > 0) {
+    emit('status', {message:'正在初始化引擎…'});
+    return finishInit(d.data, dataURL);
+  }
+  emit('status', {message:'正在加载 Rapfi 和神经网络…'});
   const response = await fetch(dataURL);
   if (!response.ok) throw new Error('无法加载神经网络：HTTP ' + response.status);
   const total = Number(response.headers.get('content-length')) || 10062586;
@@ -61,6 +67,11 @@ async function init(d) {
     data=data.buffer;
   } else data=await response.arrayBuffer();
   if (data.byteLength !== 10062586) throw new Error('神经网络数据不完整。');
+  return finishInit(data, dataURL);
+}
+// Instantiate Rapfi with an already-loaded weight package. Split out so a restart can
+// reuse the bytes the page cached instead of going back through fetch().
+async function finishInit(data, dataURL) {
   const script = new URL('./engine/rapfi-' + mode + '-simd128.js', self.location.href).href;
   importScripts(script);
   engine = await Rapfi({arguments:[], getPreloadedPackage:()=>data, mainScriptUrlOrBlob:script, locateFile: path => new URL('./engine/' + path.replace('rapfi-multi-simd128.data','rapfi-single-simd128.data'), self.location.href).href,
