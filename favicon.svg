@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="落点">
+  <rect width="64" height="64" rx="12" fill="#dfc49a"/>
+  <g stroke="#8a7756" stroke-width="2" stroke-linecap="square">
+    <path d="M12 12h40M12 24h40M12 36h40M12 48h40"/>
+    <path d="M12 12v40M24 12v40M36 12v40M48 12v40"/>
+  </g>
+  <circle cx="36" cy="36" r="9.5" fill="#1b2321"/>
+  <circle cx="33" cy="33" r="2.6" fill="#59605c" opacity=".7"/>
+</svg>
