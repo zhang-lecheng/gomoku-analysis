@@ -35,7 +35,17 @@
       <div class="run-row"><button class="primary" id="new-game">开始新局</button><button class="stop" id="review-btn" disabled>复盘</button></div>
       <div class="engine-note" id="engine-detail">正在加载本地引擎与网络权重…</div>
       <div class="kpis"><div><span>本局</span><b id="kpi-moves">0</b></div><div><span>难度</span><b id="kpi-level">—</b></div><div><span>战绩</span><b id="kpi-record">0 胜 0 负</b></div></div>
-      <div class="variation" id="mv-list" hidden><div><b>着手</b><span id="mv-count"></span></div><div class="mv-scroll" id="mv-rows"></div></div>
+      <div class="variation" id="mv-list" hidden>
+        <div class="review-head"><b>复盘</b><span id="mv-count"></span></div>
+        <div class="wr-chart" id="wr-chart"></div>
+        <div class="review-actions">
+          <label class="check"><input type="checkbox" id="review-overlay" checked> 显示选点</label>
+          <button class="text-btn" id="review-undo">撤销摆子</button>
+          <button class="text-btn" id="review-back">回到主线</button>
+        </div>
+        <p class="review-hint" id="review-hint">点列表跳到该手；在棋盘空点落子可以摆自己的变化，引擎即时评估。</p>
+        <div class="mv-scroll" id="mv-rows"></div>
+      </div>
     </div>
 
     <div id="panel-puzzles" hidden>
@@ -71,5 +81,6 @@
 <div class="toast" id="toast" role="status"></div>
 <script src="rules.js"></script>
 <script src="puzzles.js"></script>
+<script src="review-chart.js"></script>
 <script src="play.js"></script>
 </body></html>

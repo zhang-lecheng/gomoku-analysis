@@ -24,6 +24,7 @@
   const TIME_LIMIT = 120000;   // 单步对局分析的时间上限（有 maxDepth，通常远早于此结束）
   const REVIEW_TIME = 20000;   // 复盘每一手的预算
   const REVIEW_DEPTH = 10;
+  const REVIEW_PV = 5;      // 复盘时取前五候选，用来判断第几选
   const PUZZLE_TIME = 120000;
   const PUZZLES = Array.isArray(window.GOMOKU_PUZZLES) ? window.GOMOKU_PUZZLES : [];
 
@@ -66,7 +67,10 @@
     gameToken: 0,
     stepId: 0,             // 每一次引擎落子的序号，用来作废被打断的旧步骤
     reviewView: null,      // {moves:[...]} 复盘时展示的旧局面
-    bestPoints: []         // [{x,y}] 需要打 .mark-best 的点
+    bestPoints: [],        // [{x,y}] 需要打 .mark-best 的点
+    candidates: [],        // [{move,winrate,depth}] 复盘/摆子时的候选点
+    playedPoint: null,     // {x,y} 当前手，用于在覆盖层里标出来
+    review: null           // {items,index,overlay,draft} 复盘数据
   };
 
   let store = null;
@@ -74,6 +78,7 @@
   let toastTimer = null;
   let warnNode = null;
   let bestNodes = [];
+  let candNodes = [];
   const cells = [];        // 225 个 button.intersection
 
   /* ------------------------------------------------------------------ *
@@ -495,6 +500,7 @@
     if (whiteCount) whiteCount.textContent = String(white);
 
     renderBestPoints();
+    renderCandidates();
   }
 
   function renderBestPoints() {
@@ -512,6 +518,33 @@
     }
   }
 
+  // 复盘/摆子时的候选点覆盖层：名字里的胜率是该局面下行棋方的胜率
+  function renderCandidates() {
+    for (const node of candNodes) node.remove();
+    candNodes = [];
+    const host = $('board');
+    if (!host || !state.review || !state.review.overlay) return;
+    const list = (state.candidates || []).slice(0, 3);
+    for (let i = 0; i < list.length; i++) {
+      const cand = list[i];
+      if (!cand || !cand.move) continue;
+      const el = document.createElement('span');
+      el.className = 'cand rank' + (i + 1);
+      if (state.playedPoint && cand.move.x === state.playedPoint.x && cand.move.y === state.playedPoint.y) {
+        el.classList.add('played');
+      }
+      el.style.left = (6.25 + cand.move.x * 6.25) + '%';
+      el.style.top = (6.25 + cand.move.y * 6.25) + '%';
+      const pct = document.createElement('b');
+      pct.textContent = cand.winrate == null ? '—' : Math.round(cand.winrate * 100) + '%';
+      const depth = document.createElement('small');
+      depth.textContent = 'd' + (cand.depth == null ? '—' : cand.depth);
+      el.append(pct, depth);
+      host.append(el);
+      candNodes.push(el);
+    }
+  }
+
   // 落点上的棋子闪一下（正确 / 不对）
   function flashPiece(x, y, cls) {
     const cell = cells[R.idx(x, y)];
@@ -523,6 +556,10 @@
   }
 
   function onPoint(x, y) {
+    if (state.tab === 'play' && state.review && state.reviewView) {
+      guard(reviewDraft(x, y), '摆子');
+      return;
+    }
     if (state.tab === 'play') playClick(x, y);
     else if (state.tab === 'puzzles') guard(puzzleClick(x, y), '判题');
   }
@@ -781,7 +818,12 @@
     state.reviewing = false;
     state.reviewView = null;
     state.bestPoints = [];
+    state.candidates = [];
+    state.playedPoint = null;
+    state.review = null;
     state.thinking = false;
+    const panel = $('mv-list');
+    if (panel) panel.hidden = true;
     abortAnalysis();
 
     G.board = R.newBoard();
@@ -833,7 +875,7 @@
 
     const line = commitMove(x, y, G.playerColor, 'player');
     if (line) {
-      finishGame(R.resultForWin(G.playerColor, G.playerColor));
+      finishGame('win');
       return;
     }
     if (R.isFull(G.board)) {
@@ -898,7 +940,7 @@
 
     const line = commitMove(point.x, point.y, asSide, asSide === G.playerColor ? 'auto' : 'engine');
     if (line) {
-      finishGame(R.resultForWin(asSide, G.playerColor));
+      finishGame(asSide === G.playerColor ? 'loss' : 'win');
       return 'over';
     }
     if (R.isFull(G.board)) {
@@ -1006,188 +1048,321 @@
    * 复盘
    * ------------------------------------------------------------------ */
 
-  function collectPlayerHands() {
-    const hands = [];
-    let prior = [];
-    for (const move of G.moves) {
-      if (move.by === 'player' && move.color === G.playerColor) {
-        hands.push({
-          no: hands.length + 1,
-          move: { x: move.x, y: move.y },
-          prior: prior.map(m => ({ x: m.x, y: m.y, color: m.color }))
-        });
-      }
-      prior.push({ x: move.x, y: move.y, color: move.color });
-    }
-    return hands;
+  function samePoint(a, b) { return !!a && !!b && a.x === b.x && a.y === b.y; }
+
+  // Rapfi reports the win rate for the side to move; the chart wants black's share.
+  function toBlackWinrate(w, mover) {
+    if (w == null) return null;
+    const value = Number(w);
+    if (Number.isNaN(value)) return null;
+    return mover === BLACK ? value * 100 : (1 - value) * 100;
   }
+
+  function collectPlies() {
+    const out = [];
+    for (let i = 0; i < G.moves.length; i++) {
+      const m = G.moves[i];
+      out.push({
+        ply: i + 1,
+        move: m,
+        prior: G.moves.slice(0, i).map(x => ({ x: x.x, y: x.y, color: x.color }))
+      });
+    }
+    return out;
+  }
+
+  const GRADE_TEXT = { ok: '好手', mistake: '小错', blunder: '失误' };
 
   async function startReview() {
     if (state.reviewing) return;
-    if (!G.on || !G.over) {
-      toast('先下完一局再复盘');
-      return;
-    }
-    if (ENGINE.state !== 'ready') {
-      toast('引擎还没准备好');
-      return;
-    }
-    const hands = collectPlayerHands();
-    if (!hands.length) {
-      toast('这一局没有可复盘的着手');
-      return;
-    }
+    if (!G.on || !G.over) { toast('先下完一局再复盘'); return; }
+    if (ENGINE.state !== 'ready') { toast('引擎还没准备好'); return; }
+
+    const plies = collectPlies();
+    if (!plies.length) { toast('这一局没有可复盘的着手'); return; }
 
     const token = ++state.reviewToken;
     state.reviewing = true;
     state.reviewView = null;
     state.bestPoints = [];
+    state.candidates = [];
+    state.playedPoint = null;
+    state.review = { items: [], index: null, overlay: true, draft: 0 };
 
     const list = $('mv-list');
     if (list) list.hidden = false;
     const rows = $('mv-rows');
     if (rows) rows.replaceChildren();
     const count = $('mv-count');
-    if (count) count.textContent = '共 ' + hands.length + ' 手待检查';
-
+    if (count) count.textContent = '共 ' + plies.length + ' 手';
+    renderChart();
     updateControls();
     renderBoard();
 
-    for (let i = 0; i < hands.length; i++) {
+    for (let i = 0; i < plies.length; i++) {
       if (token !== state.reviewToken) return;
-      setStatus('复盘 ' + (i + 1) + '/' + hands.length);
+      setStatus('复盘 ' + (i + 1) + ' / ' + plies.length);
 
-      const hand = hands[i];
+      const p = plies[i];
       const item = {
-        no: hand.no,
-        move: hand.move,
-        prior: hand.prior,
+        ply: p.ply,
+        move: p.move,
+        prior: p.prior,
+        candidates: [],
+        rank: null,
         best: null,
         bestScore: 0,
         playedScore: 0,
         loss: 0,
         grade: null,
-        pv: [],
+        blackWin: null,
         skipped: false
       };
 
       try {
         const before = await analyze({
-          moves: hand.prior,
-          side: G.playerColor,
+          moves: p.prior,
+          side: p.move.color,
           timeMs: REVIEW_TIME,
           maxDepth: REVIEW_DEPTH,
-          multiPV: 1,
+          multiPV: REVIEW_PV,
           hashMB: 64
         });
         if (token !== state.reviewToken) return;
-
-        const afterMoves = hand.prior.concat([{ x: hand.move.x, y: hand.move.y, color: G.playerColor }]);
-        const after = await analyze({
-          moves: afterMoves,
-          side: R.opponent(G.playerColor),
-          timeMs: REVIEW_TIME,
-          maxDepth: REVIEW_DEPTH,
-          multiPV: 1,
-          hashMB: 64
-        });
-        if (token !== state.reviewToken) return;
-
-        const bestRow = before.rows && before.rows[0];
-        const playedRow = after.rows && after.rows[0];
-        if (!bestRow || !bestRow.pv || !bestRow.pv.length || !playedRow) {
-          throw new Error('没有有效变化');
+        if (!before.rows || !before.rows.length) {
+          // An empty board is answered instantly with a bare move and no PV block, so the
+          // opening move has nothing to be graded against.
+          if (!p.prior.length) { item.first = true; item.skipped = true; item.error = 'first'; }
+          throw new Error('没有可用候选');
         }
 
-        const bestScore = Number(bestRow.score) || 0;
-        const playedScore = -(Number(playedRow.score) || 0);
-        item.best = bestRow.pv[0];
-        item.bestScore = bestScore;
-        item.playedScore = playedScore;
-        item.loss = Math.round(Math.abs(playedScore - bestScore));
-        item.pv = bestRow.pv.slice(0, 8);
-        item.grade = R.gradeMove(
-          bestScore,
-          playedScore,
-          bestRow.scoreType === 'mate',
-          playedRow.scoreType === 'mate'
-        );
+        item.candidates = before.rows.map(r => ({
+          move: r.pv && r.pv[0] ? r.pv[0] : null,
+          score: Number(r.score) || 0,
+          scoreType: r.scoreType,
+          winrate: r.winrate == null ? null : Number(r.winrate),
+          depth: r.depth
+        })).filter(c => c.move);
+
+        const best = item.candidates[0];
+        item.best = best.move;
+        item.bestScore = best.score;
+
+        const hit = item.candidates.findIndex(c => samePoint(c.move, p.move));
+        if (hit >= 0) {
+          item.rank = hit + 1;
+          item.playedScore = item.candidates[hit].score;
+          item.blackWin = toBlackWinrate(item.candidates[hit].winrate, p.move.color);
+          item.grade = R.gradeMove(item.bestScore, item.playedScore,
+            best.scoreType === 'mate', item.candidates[hit].scoreType === 'mate');
+        } else {
+          // Outside the searched candidates: value the move by searching the position it creates.
+          const afterMoves = p.prior.concat([{ x: p.move.x, y: p.move.y, color: p.move.color }]);
+          const after = await analyze({
+            moves: afterMoves,
+            side: R.opponent(p.move.color),
+            timeMs: REVIEW_TIME,
+            maxDepth: REVIEW_DEPTH,
+            multiPV: 1,
+            hashMB: 64
+          });
+          if (token !== state.reviewToken) return;
+          const row = after.rows && after.rows[0];
+          item.playedScore = row ? -(Number(row.score) || 0) : 0;
+          if (row && row.winrate != null) {
+            const whiteWin = Number(row.winrate);
+            item.blackWin = (p.move.color === BLACK ? 1 - whiteWin : whiteWin) * 100;
+          }
+          item.grade = R.gradeMove(item.bestScore, item.playedScore,
+            best.scoreType === 'mate', !!(row && row.scoreType === 'mate'));
+        }
+        item.loss = Math.round(Math.abs(item.playedScore - item.bestScore));
       } catch (err) {
         if (token !== state.reviewToken) return;
         item.skipped = true;
+        item.error = String((err && err.message) || err);
       }
 
       if (token !== state.reviewToken) return;
-      appendReviewRow(item);
+      state.review.items.push(item);
+      appendPlyRow(item, state.review.items.length - 1);
+      renderChart();
     }
 
     if (token !== state.reviewToken) return;
     state.reviewing = false;
     setStatus('复盘完成');
+    if (new URLSearchParams(location.search).has('debug')) window.__review = state.review;
     updateControls();
-    toast('复盘完成：检查了 ' + hands.length + ' 手');
+    renderChart();
+    const first = state.review.items.findIndex(it => it.grade === 'blunder');
+    const fallback = state.review.items.findIndex(it => it.grade === 'mistake');
+    if (first >= 0) selectPly(first);
+    else if (fallback >= 0) selectPly(fallback);
+    const bad = state.review.items.filter(it => it.grade === 'blunder').length;
+    toast('复盘完成：' + state.review.items.length + ' 手，失误 ' + bad + ' 处');
   }
 
-  const GRADE_TEXT = { ok: '好手', mistake: '失误', blunder: '败着' };
-
-  function appendReviewRow(item) {
+  function appendPlyRow(item, at) {
     const host = $('mv-rows');
     if (!host) return;
+
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'review-row';
+    row.className = 'ply-row';
+    row.dataset.at = String(at);
 
     const no = document.createElement('span');
-    no.textContent = String(item.no).padStart(2, '0');
+    no.className = 'ply-no';
+    no.textContent = String(item.ply);
 
-    const mid = document.createElement('span');
-    const mine = document.createElement('b');
-    mine.textContent = R.name(item.move.x, item.move.y);
-    const best = document.createElement('small');
-    best.textContent = item.best ? '　最佳 ' + R.name(item.best.x, item.best.y) : '　最佳 —';
-    mid.append(mine, best);
+    const side = document.createElement('span');
+    side.className = 'ply-side';
+    const dot = document.createElement('i');
+    dot.className = 'stone ' + (item.move.color === BLACK ? 'black' : 'white');
+    side.append(dot);
 
-    const loss = document.createElement('small');
+    const move = document.createElement('span');
+    move.className = 'ply-move';
+    const b = document.createElement('b');
+    b.textContent = R.name(item.move.x, item.move.y);
+    move.append(b);
+
+    const rank = document.createElement('span');
+    rank.className = 'ply-rank' + (item.rank === 1 ? ' top' : (item.rank ? '' : ' out'));
+    rank.textContent = item.first ? '首手' : (item.skipped ? '—' : (item.rank ? item.rank + '选' : '未进前' + REVIEW_PV));
+
+    const loss = document.createElement('span');
+    loss.className = 'ply-loss';
     loss.textContent = item.skipped ? '—' : 'Δ' + item.loss;
 
     const grade = document.createElement('span');
-    if (item.skipped || !item.grade) {
-      grade.className = 'grade';
-      grade.textContent = '—';
-    } else {
-      grade.className = 'grade ' + item.grade;
-      grade.textContent = GRADE_TEXT[item.grade] || '—';
-    }
+    grade.className = 'grade ' + (item.grade || '');
+    grade.textContent = item.skipped ? '—' : (GRADE_TEXT[item.grade] || '—');
 
-    row.append(no, mid, loss, grade);
-    row.addEventListener('click', () => showReviewHand(item, row));
+    row.append(no, side, move, rank, loss, grade);
+    row.addEventListener('click', () => selectPly(at));
     host.append(row);
   }
 
-  function showReviewHand(item, row) {
-    if (state.reviewing) return;
-    state.reviewView = { moves: item.prior };
-    state.bestPoints = item.best ? [{ x: item.best.x, y: item.best.y }] : [];
-    renderBoard();
-
+  function markRow(at) {
     const host = $('mv-rows');
-    if (host) {
-      for (const el of host.querySelectorAll('.review-row')) {
-        el.classList.toggle('selected', el === row);
-      }
+    if (!host) return;
+    for (const el of host.querySelectorAll('.ply-row')) {
+      el.classList.toggle('selected', Number(el.dataset.at) === at);
     }
+  }
+
+  function renderChart() {
+    const host = $('wr-chart');
+    if (!host) return;
+    const items = (state.review && state.review.items) || [];
+    if (!window.ReviewChart) { host.hidden = true; return; }
+    host.hidden = false;
+    const points = items.filter(it => it.blackWin != null).map(it => ({
+      ply: it.ply,
+      blackWinrate: it.blackWin,
+      grade: it.grade
+    }));
+    ReviewChart.render(host, {
+      points,
+      current: state.review && state.review.index != null ? items[state.review.index].ply : null,
+      onSeek: ply => {
+        const at = items.findIndex(it => it.ply === ply);
+        if (at >= 0) selectPly(at);
+      }
+    });
+  }
+
+  function selectPly(at) {
+    if (!state.review || state.reviewing) return;
+    const items = state.review.items;
+    if (!items[at]) return;
+    const item = items[at];
+    state.review.index = at;
+    state.review.draft = 0;
+    state.reviewView = { moves: item.prior.map(m => ({ x: m.x, y: m.y, color: m.color })) };
+    state.candidates = item.candidates.slice();
+    state.playedPoint = { x: item.move.x, y: item.move.y };
+    state.bestPoints = item.best ? [{ x: item.best.x, y: item.best.y }] : [];
+
+    markRow(at);
+    renderBoard();
+    renderChart();
 
     const count = $('mv-count');
     if (count) {
-      const pvText = item.pv && item.pv.length
-        ? item.pv.map(p => R.name(p.x, p.y)).join(' → ')
-        : '（没有可用变化）';
-      const extra = item.skipped
-        ? '第 ' + item.no + ' 手 · 这一手没能算完'
-        : '第 ' + item.no + ' 手 · 评分 ' + scoreText(item.bestScore) + ' → ' + scoreText(item.playedScore);
-      count.textContent = extra + ' · ' + pvText;
+      const who = item.move.color === BLACK ? '黑' : '白';
+      const quality = item.first ? '开局首手，不评分'
+        : item.skipped ? '没算完'
+        : (item.rank ? '第 ' + item.rank + ' 选' : '未进前 ' + REVIEW_PV) + ' · ' + (GRADE_TEXT[item.grade] || '—');
+      count.textContent = '第 ' + item.ply + ' 手 · ' + who + ' ' + R.name(item.move.x, item.move.y) + ' · ' + quality;
     }
-    setStatus('查看第 ' + item.no + ' 手之前');
+    setStatus('第 ' + item.ply + ' 手之前' + (item.rank ? '（实战第 ' + item.rank + ' 选）' : ''));
+    updateControls();
+  }
+
+  // Free placement inside the review: append a stone and let the engine judge the result.
+  async function reviewDraft(x, y) {
+    if (!state.review || !state.reviewView) return;
+    const board = displayBoard();
+    if (board[R.idx(x, y)]) return;
+    const moves = state.reviewView.moves;
+    const color = moves.length % 2 === 0 ? BLACK : WHITE;
+    moves.push({ x: x, y: y, color: color });
+    state.review.draft += 1;
+    state.playedPoint = { x: x, y: y };
+    state.bestPoints = [];
+    state.candidates = [];
+    renderBoard();
+    setStatus('摆子中：引擎评估这个局面…');
+
+    const token = state.reviewToken;
+    try {
+      const res = await analyze({
+        moves: moves,
+        side: R.opponent(color),
+        timeMs: REVIEW_TIME,
+        maxDepth: REVIEW_DEPTH,
+        multiPV: 3,
+        hashMB: 64
+      });
+      if (token !== state.reviewToken || !state.review || !state.reviewView) return;
+      state.candidates = (res.rows || []).map(r => ({
+        move: r.pv && r.pv[0] ? r.pv[0] : null,
+        score: Number(r.score) || 0,
+        scoreType: r.scoreType,
+        winrate: r.winrate == null ? null : Number(r.winrate),
+        depth: r.depth
+      })).filter(c => c.move);
+      const top = state.candidates[0];
+      if (top && top.winrate != null) {
+        const blackWin = color === WHITE ? (1 - top.winrate) * 100 : top.winrate * 100;
+        setStatus('轮到' + (color === WHITE ? '黑' : '白') + '走 · 黑胜率 ' + Math.round(blackWin) + '%');
+      } else {
+        setStatus('摆子中：没有可用候选');
+      }
+      renderBoard();
+    } catch (err) {
+      setStatus('摆子评估失败');
+    }
+  }
+
+  function reviewBack() {
+    if (!state.review || state.review.index == null) return;
+    selectPly(state.review.index);
+  }
+
+  function reviewUndoDraft() {
+    if (!state.review || !state.reviewView || !state.review.draft) return;
+    state.reviewView.moves.pop();
+    state.review.draft -= 1;
+    const last = state.reviewView.moves[state.reviewView.moves.length - 1];
+    state.playedPoint = last ? { x: last.x, y: last.y } : null;
+    state.candidates = [];
+    state.bestPoints = [];
+    renderBoard();
+    setStatus('已撤销一手摆子');
   }
 
   /* ------------------------------------------------------------------ *
@@ -1688,6 +1863,19 @@
 
     const review = $('review-btn');
     if (review) review.addEventListener('click', () => { guard(startReview(), '复盘'); });
+
+    const overlay = $('review-overlay');
+    if (overlay) overlay.addEventListener('change', () => {
+      if (!state.review) return;
+      state.review.overlay = overlay.checked;
+      renderBoard();
+    });
+
+    const undoDraft = $('review-undo');
+    if (undoDraft) undoDraft.addEventListener('click', reviewUndoDraft);
+
+    const backLine = $('review-back');
+    if (backLine) backLine.addEventListener('click', reviewBack);
 
     const side = $('side');
     if (side) side.addEventListener('change', updatePlaySub);
