@@ -149,3 +149,8 @@ table.records tbody tr:hover{background:#eef1e9}
   table.records{min-width:300px}
   table.records th,table.records td{padding:7px 6px}
 }
+
+/* 题目区：提示与按钮之间留出间距，避免读起来像贴在一起 */
+#panel-puzzles .hint + .run-row{margin-top:14px}
+#panel-puzzles .run-row + .hint,#panel-puzzles .run-row + .score-note{margin-top:16px}
+#panel-puzzles .puzzle-head{margin-bottom:2px}
