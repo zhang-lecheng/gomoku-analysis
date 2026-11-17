@@ -40,5 +40,27 @@ vm.createContext(context); vm.runInContext(source,context);
   assert.equal(pv.scoreType,'mate');assert.equal(pv.score,score==='+M1'?1:-26);assert.equal(pv.id,7);
  }
  opts.onReceiveStdout('4,14');assert.equal(events.at(-1).type,'done');assert.equal(events.at(-1).move.y,14);
- console.log('Worker contract: white-to-move, passes, numeric coordinates and signed mates passed.');
+ assert.equal(events.at(-1).reason,'mate','a settled mate distance stops the search by itself');
+ assert.equal(events.at(-1).depth,0,'no DEPTH line was reported in this stub');
+
+ // Depth budget: INFO max_depth is written on every analysis, and omitting maxDepth
+ // must restore the engine's own ceiling instead of inheriting the previous target.
+ {
+  const lastCommands=n=>commands.slice(-n);
+  await context.self.onmessage({data:{type:'analyze',id:9,side:1,timeMs:1000,multiPV:1,maxDepth:24,moves:[{x:5,y:4,color:1}]}});
+  assert.equal(commands.filter(c=>c==='INFO max_depth 24').length,1,'INFO max_depth carries the requested target');
+  await context.self.onmessage({data:{type:'analyze',id:9,side:1,timeMs:1000,multiPV:1,moves:[{x:5,y:4,color:1}]}});
+  assert.ok(lastCommands(8).includes('INFO max_depth 99'),'omitting maxDepth restores the ceiling');
+  const reasons=[];
+  // reached the target depth
+  await context.self.onmessage({data:{type:'analyze',id:9,side:1,timeMs:1000,multiPV:1,maxDepth:30,moves:[{x:5,y:4,color:1}]}});
+  for (const line of ['INFO PV 0','INFO DEPTH 30','INFO TOTALNODES 4387942','INFO EVAL 577','INFO BESTLINE 5,4','INFO PV DONE']) opts.onReceiveStdout(line);
+  opts.onReceiveStdout('5,4'); reasons.push([events.at(-1).reason,events.at(-1).depth]);
+  // cut short by the clock
+  await context.self.onmessage({data:{type:'analyze',id:9,side:1,timeMs:1000,multiPV:1,maxDepth:30,moves:[{x:5,y:4,color:1}]}});
+  for (const line of ['INFO PV 0','INFO DEPTH 12','INFO TOTALNODES 1000','INFO EVAL 20','INFO BESTLINE 5,4','INFO PV DONE']) opts.onReceiveStdout(line);
+  opts.onReceiveStdout('5,4'); reasons.push([events.at(-1).reason,events.at(-1).depth]);
+  assert.deepEqual(reasons,[['depth',30],['time',12]],'done.reason distinguishes depth from time');
+ }
+ console.log('Worker contract: white-to-move, passes, numeric coordinates, signed mates, hash clear, depth budget and stop reasons passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});

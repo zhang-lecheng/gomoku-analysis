@@ -1,6 +1,8 @@
 /* Rapfi GPL-3.0-or-later worker adapter; see engine/COPYING.txt. */
 'use strict';
 let engine = null, activeId, currentPV = null, bestMove = null, mode = 'single', threads = 1;
+// Per-analysis bookkeeping for the `reason` field on `done`.
+let lastDepth = 0, mateSeen = false, targetDepth = 0;
 const emit = (type, fields = {}) => postMessage({type, ...fields});
 function output(line) {
   if (!line) return;
@@ -11,6 +13,8 @@ function output(line) {
     if (key === 'PV' && value !== 'DONE') currentPV = {index:Number(value)+1, pv:[]};
     else if (key === 'PV' && value === 'DONE' && currentPV) {
       const p = currentPV;
+      if (p.depth != null) lastDepth = p.depth;
+      if (p.scoreType === 'mate') mateSeen = true;
       emit('pv', {id:activeId, ...p, scoreType:p.scoreType || 'eval'});
       emit('stats', {id:activeId, depth:p.depth, nodes:p.nodes, timeMs:p.timeMs, nps:p.nps});
       currentPV = null;
@@ -23,7 +27,14 @@ function output(line) {
     return;
   }
   const m = /^(\d+),(\d+)$/.exec(line.trim());
-  if (m) { bestMove={x:+m[1],y:+m[2]}; emit('done',{id:activeId,move:bestMove}); return; }
+  if (m) {
+    bestMove={x:+m[1],y:+m[2]};
+    // depth: the iteration budget was the limiting factor; mate: the engine stopped on its
+    // own because a mate distance is settled; time: the wall-clock cap cut the search short.
+    const reason = targetDepth > 0 && lastDepth >= targetDepth ? 'depth' : (mateSeen ? 'mate' : 'time');
+    emit('done',{id:activeId,move:bestMove,reason,depth:lastDepth});
+    return;
+  }
   emit('log', {id:activeId, message:line});
 }
 async function init(d) {
@@ -81,9 +92,16 @@ function analyze(d) {
   const time = Number(d.timeMs); const limit = time>0 ? Math.max(100,Math.min(86400000,Math.floor(time))) : 86400000;
   const multipv = Math.max(1,Math.min(20,Math.floor(Number(d.multiPV)||1)));
   const hash = Math.max(16,Math.min(1024,Math.floor(Number(d.hashMB)||64)));
+  // 0/absent means "no depth target". INFO options persist inside the worker, so the
+  // value has to be written on every analysis or a previous target would leak into the
+  // next one. 99 is the engine's own search ceiling (max_search_depth in config.toml).
+  const reqDepth = Math.floor(Number(d.maxDepth)||0);
+  targetDepth = reqDepth>0 ? Math.max(2,Math.min(99,reqDepth)) : 0;
+  lastDepth = 0; mateSeen = false;
   engine.sendCommand('INFO timeout_turn '+limit);
   engine.sendCommand('INFO timeout_match 2000000000');
   engine.sendCommand('INFO max_memory '+(hash*1024*1024));
+  engine.sendCommand('INFO max_depth '+(targetDepth||99));
   // YXBOARD rebuilds the position but leaves the transposition table intact, so a
   // repeated analysis of the same position would silently start from the previous
   // search's hash and report a different score for identical settings. Clear it.
