@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1e292b"><title>落点 · 五子棋分析</title>
+  <link rel="stylesheet" href="style.css">
+<script src="./coi-serviceworker.js"></script>
+</head>
+<body>
+<header class="topbar"><div class="brand"><span class="brand-mark">✳</span><div><b>落点</b><span>GOMOKU ANALYSIS</span></div></div><div class="top-right"><span class="status-dot" id="engine-dot"></span><span id="engine-status">正在准备引擎</span><button class="icon-btn" id="help-btn" title="使用说明" aria-label="使用说明">?</button></div></header>
+<main class="layout">
+<section class="board-panel">
+  <div class="section-heading"><div><div class="eyebrow">POSITION EDITOR <span>／</span> 01</div><h1>棋局编辑</h1><p>摆出局面，让引擎为下一步提供思路。</p></div><div class="move-indicator"><span>当前局面</span><strong id="stone-count">14 子</strong></div></div>
+  <div class="board-wrap"><div class="board" id="board" role="grid" aria-label="十五路五子棋棋盘"></div></div>
+  <div class="board-footer"><div class="legend"><span><i class="stone black"></i>黑棋 <b id="black-count">7</b></span><span><i class="stone white"></i>白棋 <b id="white-count">7</b></span></div><div class="board-actions"><button class="text-btn" id="undo">↶ <span>撤销</span></button><button class="text-btn" id="clear">清空</button><button class="text-btn" id="preset">恢复示例</button></div></div>
+  <div class="editor-row"><div><label>落子模式</label><div class="segmented" id="modes"><button data-mode="black" class="active">● 黑棋</button><button data-mode="white">○ 白棋</button><button data-mode="alternate">交替</button><button data-mode="erase">擦除</button></div></div><div><label for="side">下一手</label><select id="side"><option value="black">● 黑棋走</option><option value="white">○ 白棋走</option></select></div></div>
+</section>
+<aside class="analysis-panel">
+  <div class="panel-title"><div><div class="eyebrow">ENGINE ANALYSIS <span>／</span> 02</div><h2>局面分析</h2></div><span class="engine-tag">RAPFI <span>WASM</span></span></div>
+  <div class="settings"><div class="field"><label for="time">思考时间</label><select id="time"><option value="5">5 秒</option><option value="15">15 秒</option><option value="45" selected>45 秒</option><option value="120">120 秒</option><option value="0">长时分析（最多 24 小时）</option></select></div><div class="field"><label for="multipv">候选点数</label><select id="multipv"><option selected>1</option><option>3</option><option>5</option><option>12</option></select></div><div class="field"><label for="threads">搜索线程</label><select id="threads"><option value="1">1 线程</option></select></div></div>
+  <div class="engine-note" id="engine-detail">正在加载本地引擎与网络权重…</div>
+  <div class="run-row"><button class="primary" id="analyze" disabled><span>✳</span> 开始分析</button><button class="stop" id="stop" disabled>停止</button></div>
+  <div class="analysis-head"><div><span class="eyebrow">CANDIDATE MOVES</span><h3>候选落点</h3></div><span class="live-label" id="search-state">等待分析</span></div>
+  <div class="metrics"><div><span>深度</span><b id="metric-depth">—</b></div><div><span>搜索节点</span><b id="metric-nodes">—</b></div><div><span>用时</span><b id="metric-time">—</b></div><div><span>节点 / 秒</span><b id="metric-speed">—</b></div></div>
+  <div class="results" id="results"><div class="empty"><span>✳</span><b>等待第一个落点</b><p>设置局面后开始分析，候选变化将在这里显示。</p></div></div>
+  <div class="variation" id="variation" hidden><div><b>变化预览</b><span id="variation-label"></span></div><div class="variation-controls"><button id="pv-prev" aria-label="上一步">←</button><span id="pv-step">0 / 0</span><button id="pv-next" aria-label="下一步">→</button><button id="pv-close">退出预览 ×</button></div></div>
+  <p class="score-note">分数来自引擎评估，正值有利于当前行棋方；搜索结果会随时间和局面变化。</p>
+</aside>
+</main>
+<footer><span>LOCAL ANALYSIS · 本地运行，棋局不会上传</span><div><button id="copy">复制分享链接</button><button id="export">导出 JSON</button><button id="import">导入 JSON</button><button id="logs">下载日志</button><input id="file" type="file" accept="application/json,.json" hidden></div></footer>
+<dialog id="help"><div class="dialog-head"><div><div class="eyebrow">HOW TO USE</div><h2>使用说明</h2></div><button id="help-close" class="icon-btn">×</button></div><p>在棋盘上点击交叉点摆子。选择黑棋、白棋、交替或擦除模式，并明确设置下一手的颜色。</p><p>点击「开始分析」后，引擎在浏览器中计算。多候选会分摊搜索预算，战术题可优先选择一个候选并给予较长时间。点击候选行可在棋盘上逐步预览变化；修改棋局会清除旧结果。</p><p>坐标以左下角为 A1。分享链接包含棋子与行棋方；JSON 可用于保存或恢复局面。浏览器关闭后正在运行的分析将停止。手动编辑局面没有完整棋谱；为设置行棋方，引擎可能插入跳步，这会影响依赖历史的判断。</p><p>多线程需要浏览器支持跨源隔离与 SharedArrayBuffer。页面会尝试通过 Service Worker 启用隔离；若不可用，则使用单线程。</p></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="app.js"></script>
+</body></html>
