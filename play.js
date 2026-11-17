@@ -1871,6 +1871,27 @@
       renderBoard();
     });
 
+    const exportGame = $('export-game');
+    if (exportGame) exportGame.addEventListener('click', () => {
+      if (!G.moves.length) { toast('还没有落子'); return; }
+      const data = {
+        v: 1,
+        level: G.level,
+        playerSide: G.playerColor === BLACK ? 'black' : 'white',
+        result: G.result || null,
+        plies: G.moves.length,
+        moves: G.moves.map(m => ({ x: m.x, y: m.y, color: m.color, by: m.by || null }))
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'gomoku-game.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('已导出 ' + data.plies + ' 手');
+    });
+
     const undoDraft = $('review-undo');
     if (undoDraft) undoDraft.addEventListener('click', reviewUndoDraft);
 
