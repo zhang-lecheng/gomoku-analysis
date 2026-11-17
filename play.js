@@ -1071,7 +1071,7 @@
     return out;
   }
 
-  const GRADE_TEXT = { ok: '好手', mistake: '小错', blunder: '失误' };
+  const GRADE_TEXT = { ok: '好手', mistake: '小错', blunder: '失误', won: '胜势', lost: '已定局' };
 
   async function startReview() {
     if (state.reviewing) return;

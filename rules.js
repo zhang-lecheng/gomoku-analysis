@@ -128,6 +128,12 @@
   // Review grading: how much a move gave up, in Rapfi score units.
   const BLUNDER = 300, MISTAKE = 120;
   function gradeMove(bestScore, playedScore, mateBest, matePlayed) {
+    // Both moves end in mate: the position is decided, scoring the difference is noise.
+    // Saying "好手" here is what made a lost game look mistake-free.
+    if (mateBest && matePlayed) {
+      if (bestScore < 0 && playedScore < 0) return 'lost';
+      if (bestScore > 0 && playedScore > 0) return 'won';
+    }
     if (mateBest && !matePlayed) return 'blunder';       // missed a forced win / walk into a mate
     if (!mateBest && matePlayed) return 'blunder';       // walked into a mate
     const loss = Math.abs(playedScore - bestScore);

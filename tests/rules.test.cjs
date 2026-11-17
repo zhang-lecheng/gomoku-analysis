@@ -92,5 +92,8 @@ assert.equal(R.gradeMove(500, 300, false, false), 'mistake');
 assert.equal(R.gradeMove(500, 450, false, false), 'ok');
 assert.equal(R.gradeMove(30000 - 35, 600, true, false), 'blunder', 'missing a forced win is a blunder');
 assert.equal(R.gradeMove(600, 30000 - 35, false, true), 'blunder', 'walking into a mate is a blunder');
+// decided positions are labelled, not praised
+assert.equal(R.gradeMove(-(30000 - 4), -(30000 - 4), true, true), 'lost', 'already mated either way');
+assert.equal(R.gradeMove(30000 - 35, 30000 - 40, true, true), 'won', 'winning either way');
 
 console.log('Rules: wins in four directions, ladder, slip, rating and review grading passed.');

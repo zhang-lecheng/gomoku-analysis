@@ -237,3 +237,7 @@ table.records tbody tr:hover{background:#eef1e9}
   .review-actions button{padding:5px 8px}
   .review-hint{font-size:10px}
 }
+
+/* 已定局的两种评价：不改胜负，只是不再把它标成好手 */
+.grade.won{color:#3c5a46;background:#e3ecdc}
+.grade.lost{color:#7d8a80;background:#eceee8}
